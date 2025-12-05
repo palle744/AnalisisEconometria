@@ -3,6 +3,8 @@ import numpy as np
 import yfinance as yf
 from typing import List, Dict
 
+from datetime import datetime, timedelta
+
 def calculate_rsi(series, period=14):
     delta = series.diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
@@ -14,8 +16,19 @@ def analyze_technical(ticker: str, start_date: str, end_date: str, indicators: L
     """
     Real implementation using yfinance data.
     """
+    # Adjust end_date to be inclusive (yfinance end is exclusive)
+    if isinstance(end_date, str):
+        try:
+            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+            adj_end_date = end_date_obj + timedelta(days=1)
+        except ValueError:
+            # Fallback if date format is wrong, though it should be validated by Pydantic
+            adj_end_date = end_date
+    else:
+        adj_end_date = end_date
+
     # Fetch data
-    df = yf.download(ticker, start=start_date, end=end_date)
+    df = yf.download(ticker, start=start_date, end=adj_end_date)
     
     if df.empty:
         return {"error": "No data found for ticker"}
