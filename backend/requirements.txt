@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+pandas
+numpy
+scipy
+statsmodels
+scikit-learn
+matplotlib
+
+
+python-multipart
+pytest
+requests
+httpx
+reportlab
+yfinance
+openpyxl

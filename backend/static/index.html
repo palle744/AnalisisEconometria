@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Econometría</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 font-sans">
+    <div id="app" class="container mx-auto p-6">
+        <div v-if="!tickers" class="text-center p-10">Cargando aplicación...</div>
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Plataforma de Econometría</h1>
+            <p class="text-gray-600">Optimización de Portafolios (Markowitz) y Análisis Financiero</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Controls -->
+            <div class="bg-white p-6 rounded-lg shadow-md md:col-span-1">
+                <h2 class="text-xl font-semibold mb-4">Configuración</h2>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Modo</label>
+                    <div class="flex space-x-2 bg-gray-100 p-1 rounded-md">
+                        <button @click="mode = 'optimize'" :class="{'bg-white shadow': mode === 'optimize'}"
+                            class="flex-1 py-1 px-2 rounded-md text-sm transition-all">Optimizar (Auto)</button>
+                        <button @click="mode = 'manual'" :class="{'bg-white shadow': mode === 'manual'}"
+                            class="flex-1 py-1 px-2 rounded-md text-sm transition-all">Manual</button>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Selecciona 5 Activos</label>
+
+                    <div class="space-y-2">
+                        <!-- Asset 1 -->
+                        <select v-model="asset1" class="block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                            <option disabled value="">Activo 1</option>
+                            <optgroup v-for="(assets, category) in availableAssets" :label="category" :key="category">
+                                <option v-for="asset in assets" :value="asset.symbol">{{ asset.name }} ({{ asset.symbol
+                                    }})</option>
+                            </optgroup>
+                        </select>
+                        <div v-if="mode === 'manual'" class="flex items-center space-x-2 px-2">
+                            <span class="text-xs text-gray-500">Peso %:</span>
+                            <input v-model.number="weight1" type="number" min="0" max="100"
+                                class="w-20 border rounded p-1 text-sm">
+                        </div>
+
+                        <!-- Asset 2 -->
+                        <select v-model="asset2" class="block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                            <option disabled value="">Activo 2</option>
+                            <optgroup v-for="(assets, category) in availableAssets" :label="category" :key="category">
+                                <option v-for="asset in assets" :value="asset.symbol">{{ asset.name }} ({{ asset.symbol
+                                    }})</option>
+                            </optgroup>
+                        </select>
+                        <div v-if="mode === 'manual'" class="flex items-center space-x-2 px-2">
+                            <span class="text-xs text-gray-500">Peso %:</span>
+                            <input v-model.number="weight2" type="number" min="0" max="100"
+                                class="w-20 border rounded p-1 text-sm">
+                        </div>
+
+                        <!-- Asset 3 -->
+                        <select v-model="asset3" class="block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                            <option disabled value="">Activo 3</option>
+                            <optgroup v-for="(assets, category) in availableAssets" :label="category" :key="category">
+                                <option v-for="asset in assets" :value="asset.symbol">{{ asset.name }} ({{ asset.symbol
+                                    }})</option>
+                            </optgroup>
+                        </select>
+                        <div v-if="mode === 'manual'" class="flex items-center space-x-2 px-2">
+                            <span class="text-xs text-gray-500">Peso %:</span>
+                            <input v-model.number="weight3" type="number" min="0" max="100"
+                                class="w-20 border rounded p-1 text-sm">
+                        </div>
+
+                        <!-- Asset 4 -->
+                        <select v-model="asset4" class="block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                            <option disabled value="">Activo 4</option>
+                            <optgroup v-for="(assets, category) in availableAssets" :label="category" :key="category">
+                                <option v-for="asset in assets" :value="asset.symbol">{{ asset.name }} ({{ asset.symbol
+                                    }})</option>
+                            </optgroup>
+                        </select>
+                        <div v-if="mode === 'manual'" class="flex items-center space-x-2 px-2">
+                            <span class="text-xs text-gray-500">Peso %:</span>
+                            <input v-model.number="weight4" type="number" min="0" max="100"
+                                class="w-20 border rounded p-1 text-sm">
+                        </div>
+
+                        <!-- Asset 5 -->
+                        <select v-model="asset5" class="block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                            <option disabled value="">Activo 5</option>
+                            <optgroup v-for="(assets, category) in availableAssets" :label="category" :key="category">
+                                <option v-for="asset in assets" :value="asset.symbol">{{ asset.name }} ({{ asset.symbol
+                                    }})</option>
+                            </optgroup>
+                        </select>
+                        <div v-if="mode === 'manual'" class="flex items-center space-x-2 px-2">
+                            <span class="text-xs text-gray-500">Peso %:</span>
+                            <input v-model.number="weight5" type="number" min="0" max="100"
+                                class="w-20 border rounded p-1 text-sm">
+                        </div>
+                    </div>
+                    <div v-if="mode === 'manual'" class="mt-2 text-right text-sm"
+                        :class="{'text-red-500': totalWeight !== 100, 'text-green-500': totalWeight === 100}">
+                        Total: {{ totalWeight }}%
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Fecha Inicio</label>
+                    <input v-model="startDate" type="date"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Fecha Fin</label>
+                    <input v-model="endDate" type="date"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Monto a Invertir (USD)</label>
+                    <input v-model.number="investmentAmount" type="number"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="10000">
+                </div>
+
+                <div class="flex space-x-2">
+                    <button @click="runAnalysis" :disabled="loading || (mode === 'manual' && totalWeight !== 100)"
+                        class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 disabled:opacity-50">
+                        {{ loading ? 'Calculando...' : (mode === 'optimize' ? 'Optimizar' : 'Analizar') }}
+                    </button>
+                    <button @click="downloadReport" :disabled="loading || !result"
+                        class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:opacity-50">
+                        PDF
+                    </button>
+                    <button @click="downloadExcel" :disabled="loading || !result"
+                        class="w-full bg-emerald-600 text-white py-2 px-4 rounded-md hover:bg-emerald-700 disabled:opacity-50">
+                        Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div class="bg-white p-6 rounded-lg shadow-md md:col-span-2">
+                <div v-if="result">
+                    <div class="grid grid-cols-3 gap-4 mb-6 text-center">
+                        <div class="p-4 bg-blue-50 rounded-lg">
+                            <p class="text-sm text-gray-500">Retorno Esperado</p>
+                            <p class="text-2xl font-bold text-blue-600">{{ formatPercent(result.expected_return) }}</p>
+                        </div>
+                        <div class="p-4 bg-red-50 rounded-lg">
+                            <p class="text-sm text-gray-500">Volatilidad (Riesgo)</p>
+                            <p class="text-2xl font-bold text-red-600">{{ formatPercent(result.portfolio_std) }}</p>
+                        </div>
+                        <div class="p-4 bg-green-50 rounded-lg">
+                            <p class="text-sm text-gray-500">Sharpe Ratio</p>
+                            <p class="text-2xl font-bold text-green-600">{{ result.sharpe.toFixed(2) }}</p>
+                        </div>
+                    </div>
+
+                    <div v-if="portfolioStatus" class="mb-6 p-4 rounded-lg border-l-4"
+                        :class="portfolioStatus.efficiency === 'Eficiente' ? 'bg-green-50 border-green-500 text-green-700' : 'bg-yellow-50 border-yellow-500 text-yellow-700'">
+                        <p class="font-medium text-lg">Análisis de Estatus</p>
+                        <p v-html="portfolioStatus.message"></p>
+                        <p class="text-sm mt-1 opacity-80" v-if="portfolioStatus.efficiency === 'Ineficiente'">
+                            Podrías obtener un mayor retorno con el mismo nivel de riesgo ajustando los pesos.
+                        </p>
+                    </div>
+
+                    <div class="mb-6">
+                        <h3 class="text-lg font-medium mb-2">Asignación de Activos</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th @mousemove="showTooltip('Símbolo identificador del activo', $event)"
+                                            @mouseleave="hideTooltip"
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-help">
+                                            Activo</th>
+                                        <th @mousemove="showTooltip('Proporción del portafolio asignada a este activo', $event)"
+                                            @mouseleave="hideTooltip"
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-help">
+                                            Peso</th>
+                                        <th @mousemove="showTooltip('Precio del activo en la fecha de inicio seleccionada', $event)"
+                                            @mouseleave="hideTooltip"
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-help">
+                                            Precio Inicio</th>
+                                        <th @mousemove="showTooltip('Precio del activo en la fecha de fin (o último dato disponible)', $event)"
+                                            @mouseleave="hideTooltip"
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-help">
+                                            Precio Cierre</th>
+                                        <th @mousemove="showTooltip('Rendimiento porcentual del activo en el periodo', $event)"
+                                            @mouseleave="hideTooltip"
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-help">
+                                            Retorno</th>
+                                        <th @mousemove="showTooltip('Valor monetario de la inversión en este activo', $event)"
+                                            @mouseleave="hideTooltip"
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-help">
+                                            Valor Neto (USD)</th>
+                                        <th @mousemove="showTooltip('Cantidad teórica de unidades/acciones', $event)"
+                                            @mouseleave="hideTooltip"
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-help">
+                                            Unidades</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr v-for="(weight, ticker) in result.weights" :key="ticker">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{
+                                            ticker }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{
+                                            formatPercent(weight) }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${{
+                                            result.start_prices[ticker].toFixed(2) }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${{
+                                            result.latest_prices[ticker].toFixed(2) }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm"
+                                            :class="result.latest_prices[ticker] >= result.start_prices[ticker] ? 'text-green-600' : 'text-red-600'">
+                                            {{ formatPercent((result.latest_prices[ticker] -
+                                            result.start_prices[ticker]) / result.start_prices[ticker]) }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${{
+                                            (investmentAmount * weight).toFixed(2) }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{
+                                            ((investmentAmount * weight) / result.latest_prices[ticker]).toFixed(4) }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="pieChart" class="mt-4"></div>
+                    </div>
+
+                    <div v-if="result.historical_data || (result.historical_prices && result.historical_dates)"
+                        class="mt-8">
+                        <h3 class="text-lg font-medium mb-4">Comportamiento Histórico Individual</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div v-for="ticker in Object.keys(result.historical_prices || {})" :key="ticker"
+                                class="bg-white p-4 rounded shadow border">
+                                <h4 class="font-bold text-center mb-2 text-gray-700">{{ ticker }}</h4>
+                                <div :id="'chart-' + ticker"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="result.frontier && result.frontier.length > 0" class="mt-8">
+                        <h3 class="text-lg font-medium mb-2">Frontera Eficiente</h3>
+                        <div id="frontierChart"></div>
+                    </div>
+
+                    <div v-if="result.cumulative_performance || result.correlation_matrix" class="mt-8">
+                        <h3 class="text-lg font-medium mb-4">Análisis Avanzado</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div v-if="result.cumulative_performance" class="bg-white p-4 rounded shadow border">
+                                <h4 class="font-bold text-center mb-2 text-gray-700">Rendimiento Acumulado vs S&P 500
+                                </h4>
+                                <div id="cumulativeChart"></div>
+                            </div>
+                            <div v-if="result.correlation_matrix" class="bg-white p-4 rounded shadow border">
+                                <h4 class="font-bold text-center mb-2 text-gray-700">Matriz de Correlación</h4>
+                                <div id="correlationChart"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="result.news && Object.keys(result.news).length > 0" class="mt-8">
+                        <h3 class="text-lg font-medium mb-4">Noticias Recientes</h3>
+                        <div class="space-y-6">
+                            <div v-for="(newsItems, ticker) in result.news" :key="ticker">
+                                <h4 class="font-bold text-gray-700 mb-2 border-b pb-1">{{ ticker }}</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div v-for="item in newsItems.slice(0, 2)" :key="item.uuid"
+                                        class="bg-white p-4 rounded shadow border flex space-x-4 hover:bg-gray-50 transition">
+                                        <div v-if="item.thumbnail && item.thumbnail.resolutions && item.thumbnail.resolutions.length > 0"
+                                            class="flex-shrink-0">
+                                            <img :src="item.thumbnail.resolutions[0].url" alt="News Thumbnail"
+                                                class="w-24 h-24 object-cover rounded">
+                                        </div>
+                                        <div class="flex-1">
+                                            <a :href="item.link" target="_blank"
+                                                class="text-blue-600 font-semibold hover:underline line-clamp-2">{{
+                                                item.title }}</a>
+                                            <p class="text-xs text-gray-500 mt-1">{{ item.publisher }} <span
+                                                    v-if="item.providerPublishTime">• {{
+                                                    formatDate(item.providerPublishTime) }}</span></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="text-center text-gray-500 py-12">
+                    Ejecuta una optimización o análisis para ver los resultados.
+                </div>
+            </div>
+        </div>
+        <!-- Tooltip Element -->
+        <div v-if="tooltip.visible"
+            class="fixed z-50 bg-gray-900 text-white text-xs rounded px-3 py-2 shadow-xl pointer-events-none max-w-xs transition-opacity duration-200"
+            :style="{ top: (tooltip.y - 10) + 'px', left: tooltip.x + 'px', transform: 'translate(-50%, -100%)' }">
+            {{ tooltip.text }}
+            <!-- Arrow -->
+            <div
+                class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, nextTick, computed } = Vue
+
+        createApp({
+            setup() {
+                const mode = ref('optimize') // 'optimize' or 'manual'
+                const asset1 = ref('META')
+                const asset2 = ref('AVGO')
+                const asset3 = ref('GLD')
+                const asset4 = ref('MSFT')
+                const asset5 = ref('GOOGL')
+
+                const weight1 = ref(20)
+                const weight2 = ref(20)
+                const weight3 = ref(20)
+                const weight4 = ref(20)
+                const weight5 = ref(20)
+
+                const availableAssets = {
+                    'Acciones Tecnológicas': [
+                        { symbol: 'META', name: 'Meta Platforms' },
+                        { symbol: 'AVGO', name: 'Broadcom' },
+                        { symbol: 'NVDA', name: 'NVIDIA' },
+                        { symbol: 'AAPL', name: 'Apple' },
+                        { symbol: 'MSFT', name: 'Microsoft' },
+                        { symbol: 'GOOGL', name: 'Alphabet' },
+                        { symbol: 'TSLA', name: 'Tesla' },
+                        { symbol: 'AMZN', name: 'Amazon' }
+                    ],
+                    'ETFs': [
+                        { symbol: 'GLD', name: 'SPDR Gold Shares' },
+                        { symbol: 'SPY', name: 'SPDR S&P 500' },
+                        { symbol: 'QQQ', name: 'Invesco QQQ' },
+                        { symbol: 'IWM', name: 'Russell 2000' },
+                        { symbol: 'EEM', name: 'Emerging Markets' },
+                        { symbol: 'VTI', name: 'Total Stock Market' }
+                    ],
+                    'Monedas / Cripto': [
+                        { symbol: 'EURUSD=X', name: 'Euro / USD' },
+                        { symbol: 'MXN=X', name: 'USD / Peso Mexicano' },
+                        { symbol: 'JPY=X', name: 'USD / Yen Japonés' },
+                        { symbol: 'GBPUSD=X', name: 'Libra / USD' },
+                        { symbol: 'CHF=X', name: 'USD / Franco Suizo' },
+                        { symbol: 'BTC-USD', name: 'Bitcoin' },
+                        { symbol: 'ETH-USD', name: 'Ethereum' }
+                    ]
+                }
+
+                const startDate = ref('2021-01-01')
+                const endDate = ref('2023-01-01')
+                const investmentAmount = ref(10000)
+                const loading = ref(false)
+                const result = ref(null)
+
+                // Tooltip State
+                const tooltip = ref({ visible: false, text: '', x: 0, y: 0 })
+
+                const showTooltip = (text, event) => {
+                    tooltip.value.text = text
+                    tooltip.value.x = event.clientX
+                    tooltip.value.y = event.clientY
+                    tooltip.value.visible = true
+                }
+
+                const hideTooltip = () => {
+                    tooltip.value.visible = false
+                }
+
+                // Computed tickers for compatibility check
+                const tickers = computed(() => {
+                    return [asset1.value, asset2.value, asset3.value, asset4.value, asset5.value].filter(t => t).join(',')
+                })
+
+                const totalWeight = computed(() => {
+                    return weight1.value + weight2.value + weight3.value + weight4.value + weight5.value
+                })
+
+                const portfolioStatus = computed(() => {
+                    if (!result.value || !result.value.frontier || result.value.frontier.length === 0) return null;
+
+                    const portStd = result.value.portfolio_std;
+                    const portRet = result.value.expected_return;
+
+                    // Sort frontier by std_dev to allow interpolation
+                    const sortedFrontier = [...result.value.frontier].sort((a, b) => a.std_dev - b.std_dev);
+
+                    // Find max return for this risk level (Interpolation)
+                    let maxPossibleReturn = -Infinity;
+
+                    // If risk is lower than the lowest risk on frontier, compare with the safest point
+                    if (portStd <= sortedFrontier[0].std_dev) {
+                        maxPossibleReturn = sortedFrontier[0].return;
+                    }
+                    // If risk is higher than highest risk, compare with riskiest point
+                    else if (portStd >= sortedFrontier[sortedFrontier.length - 1].std_dev) {
+                        maxPossibleReturn = sortedFrontier[sortedFrontier.length - 1].return;
+                    }
+                    else {
+                        // Interpolate
+                        for (let i = 0; i < sortedFrontier.length - 1; i++) {
+                            const p1 = sortedFrontier[i];
+                            const p2 = sortedFrontier[i + 1];
+                            if (portStd >= p1.std_dev && portStd <= p2.std_dev) {
+                                const t = (portStd - p1.std_dev) / (p2.std_dev - p1.std_dev);
+                                maxPossibleReturn = p1.return + t * (p2.return - p1.return);
+                                break;
+                            }
+                        }
+                    }
+
+                    // Efficiency Check
+                    // If portfolio return is significantly lower than frontier return for similar risk
+                    const efficiencyThreshold = 0.01; // 1% tolerance
+                    let efficiency = "Eficiente";
+                    let diff = maxPossibleReturn - portRet;
+
+                    if (diff > efficiencyThreshold) {
+                        efficiency = "Ineficiente";
+                    }
+
+                    // Risk Profile
+                    const minRisk = sortedFrontier[0].std_dev;
+                    const maxRisk = sortedFrontier[sortedFrontier.length - 1].std_dev;
+                    const riskRange = maxRisk - minRisk;
+
+                    let profile = "Moderado";
+                    if (portStd < minRisk + (riskRange * 0.33)) {
+                        profile = "Conservador";
+                    } else if (portStd > minRisk + (riskRange * 0.66)) {
+                        profile = "Agresivo";
+                    }
+
+                    let message = `Tu portafolio es considerado **${efficiency}** y tiene un perfil de riesgo **${profile}**.<br>`;
+
+                    if (efficiency === "Ineficiente") {
+                        message += `Para este nivel de riesgo (${formatPercent(portStd)}), podrías obtener un retorno de hasta **${formatPercent(maxPossibleReturn)}** (tú tienes ${formatPercent(portRet)}).`;
+                    } else {
+                        message += `Estás obteniendo un retorno cercano al óptimo para tu nivel de riesgo.`;
+                    }
+
+                    if (portRet < 0) {
+                        message += `<br><span class="text-red-600 font-bold">Nota: Tu retorno esperado es negativo debido a las condiciones del mercado o la selección de activos.</span>`;
+                    }
+
+                    return {
+                        efficiency,
+                        profile,
+                        message
+                    };
+                })
+
+                const formatPercent = (val) => (val * 100).toFixed(2) + '%'
+
+                const formatDate = (timestamp) => {
+                    if (!timestamp) return '';
+                    try {
+                        return new Date(timestamp * 1000).toLocaleDateString();
+                    } catch (e) {
+                        return '';
+                    }
+                }
+
+                const runAnalysis = async () => {
+                    loading.value = true
+                    try {
+                        const selectedTickers = [asset1.value, asset2.value, asset3.value, asset4.value, asset5.value].filter(t => t)
+                        if (selectedTickers.length < 2) {
+                            alert("Por favor selecciona al menos 2 activos diferentes.")
+                            loading.value = false
+                            return
+                        }
+
+                        let endpoint = '/api/optimize'
+                        let body = {
+                            tickers: selectedTickers,
+                            from: startDate.value,
+                            to: endDate.value,
+                            risk_free_rate: 0.035,
+                            allow_short: false
+                        }
+
+                        if (mode.value === 'manual') {
+                            endpoint = '/api/analyze'
+                            body.weights = [weight1.value / 100, weight2.value / 100, weight3.value / 100, weight4.value / 100, weight5.value / 100]
+                        }
+
+                        const response = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(body)
+                        })
+
+                        if (!response.ok) {
+                            const err = await response.json()
+                            throw new Error(err.detail || 'Error en el servidor')
+                        }
+
+                        const data = await response.json()
+                        result.value = data
+                        await nextTick()
+                        renderCharts(data)
+                    } catch (e) {
+                        alert('Error: ' + e.message)
+                    } finally {
+                        loading.value = false
+                    }
+                }
+
+                const downloadReport = async () => {
+                    if (!result.value) return;
+
+                    const selectedTickers = [asset1.value, asset2.value, asset3.value, asset4.value, asset5.value].filter(t => t)
+                    const body = {
+                        tickers: selectedTickers,
+                        from: startDate.value,
+                        to: endDate.value,
+                        risk_free_rate: 0.035,
+                        allow_short: false
+                    }
+
+                    if (mode.value === 'manual') {
+                        body.weights = [weight1.value / 100, weight2.value / 100, weight3.value / 100, weight4.value / 100, weight5.value / 100]
+                    }
+
+                    try {
+                        const response = await fetch('/api/report/pdf', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(body)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Error generando el reporte');
+                        }
+
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'reporte_portafolio.pdf';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                    } catch (e) {
+                        alert('Error al descargar el PDF: ' + e.message);
+                    }
+                }
+
+                const downloadExcel = async () => {
+                    if (!result.value) return;
+
+                    const selectedTickers = [asset1.value, asset2.value, asset3.value, asset4.value, asset5.value].filter(t => t)
+                    const body = {
+                        tickers: selectedTickers,
+                        from: startDate.value,
+                        to: endDate.value,
+                        risk_free_rate: 0.035,
+                        allow_short: false
+                    }
+
+                    if (mode.value === 'manual') {
+                        body.weights = [weight1.value / 100, weight2.value / 100, weight3.value / 100, weight4.value / 100, weight5.value / 100]
+                    }
+
+                    try {
+                        const response = await fetch('/api/report/excel', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(body)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Error generando el reporte Excel');
+                        }
+
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'reporte_portafolio.xlsx';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                    } catch (e) {
+                        alert('Error al descargar el Excel: ' + e.message);
+                    }
+                }
+
+                const renderCharts = (data) => {
+                    // Pie Chart
+                    const pieData = [{
+                        values: Object.values(data.weights),
+                        labels: Object.keys(data.weights),
+                        type: 'pie'
+                    }]
+                    Plotly.newPlot('pieChart', pieData, { height: 300, margin: { t: 0, b: 0 } })
+
+                    // Historical Charts
+                    if (data.historical_prices && data.historical_dates) {
+                        for (const ticker of Object.keys(data.historical_prices)) {
+                            const trace = {
+                                x: data.historical_dates,
+                                y: data.historical_prices[ticker],
+                                type: 'scatter',
+                                mode: 'lines',
+                                name: ticker,
+                                line: { width: 2 }
+                            };
+
+                            // Calculate color based on return
+                            const prices = data.historical_prices[ticker];
+                            const start = prices[0];
+                            const end = prices[prices.length - 1];
+                            const color = end >= start ? '#16a34a' : '#dc2626'; // green-600 : red-600
+                            trace.line.color = color;
+
+                            Plotly.newPlot('chart-' + ticker, [trace], {
+                                height: 200,
+                                margin: { t: 10, b: 30, l: 40, r: 10 },
+                                xaxis: { showgrid: false, tickfont: { size: 10 } },
+                                yaxis: { showgrid: true, tickfont: { size: 10 } }
+                            });
+                        }
+                    }
+
+                    // Frontier Chart (only if available)
+                    if (data.frontier && data.frontier.length > 0) {
+                        const frontierX = data.frontier.map(p => p.std_dev)
+                        const frontierY = data.frontier.map(p => p.return)
+
+                        const trace1 = {
+                            x: frontierX,
+                            y: frontierY,
+                            mode: 'lines+markers',
+                            type: 'scatter',
+                            name: 'Frontera Eficiente'
+                        }
+
+                        const trace2 = {
+                            x: [data.portfolio_std],
+                            y: [data.expected_return],
+                            mode: 'markers',
+                            type: 'scatter',
+                            name: 'Portafolio Actual',
+                            marker: { size: 12, color: 'red' }
+                        }
+
+                        Plotly.newPlot('frontierChart', [trace1, trace2], {
+                            height: 400,
+                            margin: { t: 20, b: 40, l: 40, r: 20 },
+                            xaxis: { title: 'Volatilidad' },
+                            yaxis: { title: 'Retorno Esperado' }
+                        })
+                    }
+
+                    // Cumulative Performance Chart
+                    if (data.cumulative_performance) {
+                        const trace1 = {
+                            x: data.cumulative_performance.dates,
+                            y: data.cumulative_performance.portfolio,
+                            mode: 'lines',
+                            name: 'Mi Portafolio',
+                            line: { color: '#2563eb', width: 2 }
+                        };
+
+                        const trace2 = {
+                            x: data.cumulative_performance.dates,
+                            y: data.cumulative_performance.benchmark,
+                            mode: 'lines',
+                            name: 'S&P 500 (Benchmark)',
+                            line: { color: '#9ca3af', width: 2, dash: 'dot' }
+                        };
+
+                        Plotly.newPlot('cumulativeChart', [trace1, trace2], {
+                            height: 300,
+                            margin: { t: 10, b: 30, l: 40, r: 10 },
+                            xaxis: { showgrid: false, tickfont: { size: 10 } },
+                            yaxis: { title: 'Retorno Acumulado (%)', showgrid: true },
+                            legend: { orientation: 'h', y: 1.1 }
+                        });
+                    }
+
+                    // Correlation Heatmap
+                    if (data.correlation_matrix) {
+                        const trace = {
+                            z: data.correlation_matrix.data,
+                            x: data.correlation_matrix.index,
+                            y: data.correlation_matrix.index,
+                            type: 'heatmap',
+                            colorscale: 'RdBu',
+                            zmin: -1,
+                            zmax: 1
+                        };
+
+                        Plotly.newPlot('correlationChart', [trace], {
+                            height: 300,
+                            margin: { t: 10, b: 30, l: 40, r: 10 }
+                        });
+                    }
+                }
+
+                return {
+                    mode,
+                    asset1, asset2, asset3, asset4, asset5,
+                    weight1, weight2, weight3, weight4, weight5, totalWeight,
+                    availableAssets,
+                    tickers,
+                    startDate,
+                    endDate,
+                    investmentAmount,
+                    loading,
+                    result,
+                    runAnalysis,
+                    downloadReport,
+                    downloadExcel,
+                    formatPercent,
+                    formatDate,
+                    portfolioStatus,
+                    tooltip,
+                    showTooltip,
+                    hideTooltip
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+
+</html>
